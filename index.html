@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Генератор образовательных промптов</title>
+  <style>
+    :root{
+      --bg:#f7f5fb; --card:#ffffff; --text:#252238; --muted:#6f6a7e;
+      --purple:#7257d9; --purple-dark:#5b43bd; --purple-soft:#eee9ff;
+      --green:#4aa879; --green-soft:#e9f7f0; --border:#e5e0ef;
+      --danger:#b84444; --shadow:0 14px 40px rgba(55,42,91,.09);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:1120px;margin:0 auto;padding:28px 20px 54px}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+    .logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,var(--purple),var(--green));display:grid;place-items:center;color:white;font-weight:800}
+    .brand-title{font-weight:800}
+    .brand-sub{font-size:13px;color:var(--muted);margin-top:2px}
+    .screen{display:none}
+    .screen.active{display:block}
+    .hero{min-height:68vh;display:grid;place-items:center;text-align:center}
+    .hero-card{max-width:760px;padding:56px 42px;background:var(--card);border:1px solid var(--border);border-radius:30px;box-shadow:var(--shadow)}
+    h1{font-size:clamp(34px,5vw,58px);line-height:1.03;margin:0 0 18px;letter-spacing:-.035em}
+    h2{font-size:32px;margin:0 0 8px;letter-spacing:-.025em}
+    h3{margin:0;font-size:19px}
+    p{line-height:1.55}
+    .lead{font-size:19px;color:var(--muted);max-width:650px;margin:0 auto 28px}
+    .primary,.secondary,.ghost{border:0;border-radius:14px;padding:13px 20px;font-weight:750;transition:.18s}
+    .primary{background:var(--purple);color:white}
+    .primary:hover{background:var(--purple-dark);transform:translateY(-1px)}
+    .secondary{background:var(--green-soft);color:#256f50}
+    .ghost{background:transparent;color:var(--purple);padding-left:4px}
+    .large{padding:15px 28px;font-size:17px}
+    .topline{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin:12px 0 22px}
+    .eyebrow{font-size:13px;font-weight:800;color:var(--purple);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+    .muted{color:var(--muted)}
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .task-card{text-align:left;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;display:flex;gap:16px;align-items:flex-start;transition:.18s;box-shadow:0 4px 18px rgba(55,42,91,.035)}
+    .task-card:hover{border-color:#cfc4f7;transform:translateY(-2px);box-shadow:var(--shadow)}
+    .icon{width:42px;height:42px;flex:0 0 42px;border-radius:13px;background:var(--purple-soft);display:grid;place-items:center;font-size:20px}
+    .task-card:nth-child(3n) .icon,.task-card:nth-child(4n) .icon{background:var(--green-soft)}
+    .task-desc{font-size:14px;color:var(--muted);margin-top:5px;line-height:1.4}
+    .stepbar{display:flex;gap:8px;margin:18px 0 24px}
+    .step{height:6px;flex:1;background:#e9e5ef;border-radius:10px}
+    .step.done{background:var(--purple)}
+    .panel{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:28px;box-shadow:var(--shadow)}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .field.full{grid-column:1/-1}
+    label{display:block;font-weight:750;margin-bottom:8px}
+    .optional{font-weight:500;color:var(--muted);font-size:13px}
+    input,textarea,select{width:100%;border:1px solid #dcd6e8;background:#fff;border-radius:13px;padding:13px 14px;color:var(--text);outline:none;transition:.15s}
+    textarea{min-height:105px;resize:vertical}
+    input:focus,textarea:focus,select:focus{border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-soft)}
+    .invalid{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(184,68,68,.08)!important}
+    .error{font-size:12px;color:var(--danger);margin-top:6px;display:none}
+    .hint{background:var(--green-soft);border-radius:14px;padding:13px 15px;color:#356e57;font-size:14px;line-height:1.45;margin-top:18px}
+    .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:24px}
+    .result-box{white-space:pre-wrap;background:#fbfaff;border:1px solid var(--border);border-radius:17px;padding:22px;line-height:1.62;max-height:58vh;overflow:auto;font-size:15px}
+    .result-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .usage{margin-top:16px;font-size:14px;color:var(--muted)}
+    .notice{background:#fff8e8;border:1px solid #f0dfb6;border-radius:14px;padding:13px 15px;color:#765c20;font-size:14px;margin-bottom:18px}
+    .ai-links{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 22px}
+    .ai-link{display:inline-flex;align-items:center;text-decoration:none;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px 13px;font-size:14px;font-weight:750}
+    .ai-link:hover{border-color:#cfc4f7;background:var(--purple-soft)}
+    .workspace{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+    .task-list{display:grid;gap:8px}
+    .task-card.compact{padding:13px 14px;border-radius:14px}
+    .task-card.compact .icon{width:34px;height:34px;flex-basis:34px;border-radius:10px;font-size:16px}
+    .task-card.compact h3{font-size:15px}
+    .task-card.selected{border-color:var(--purple);background:var(--purple-soft)}
+    .result-inline{margin-top:24px}
+    @media(max-width:900px){.workspace{grid-template-columns:1fr}}
+    @media(max-width:760px){
+      .app{padding:18px 14px 36px}.cards,.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}
+      .hero-card{padding:38px 22px}.topline{align-items:flex-start;flex-direction:column}h2{font-size:27px}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="brand">
+    <div class="logo">AI</div>
+    <div><div class="brand-title">Генератор образовательных промптов</div><div class="brand-sub">Для повседневных задач учителя</div></div>
+  </div>
+
+  <div class="topline">
+    <div>
+      <div class="eyebrow">Промпты без промпт-инжиниринга</div>
+      <h2>Что вы хотите сделать?</h2>
+      <p class="muted">Выберите задачу, заполните несколько полей и получите готовый промпт.</p>
+    </div>
+  </div>
+
+  <div class="ai-links" aria-label="Открыть нейросеть">
+    <a class="ai-link" href="https://chat.qwen.ai/" target="_blank" rel="noopener noreferrer">Qwen ↗</a>
+    <a class="ai-link" href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">DeepSeek ↗</a>
+    <a class="ai-link" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">ChatGPT ↗</a>
+    <a class="ai-link" href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer">Gemini ↗</a>
+  </div>
+
+  <div class="workspace">
+    <aside class="panel">
+      <div id="taskCards" class="task-list"></div>
+    </aside>
+
+    <main>
+      <div id="emptyState" class="panel">
+        <h3>Выберите педагогическую задачу</h3>
+        <p class="muted">Форма появится здесь. Все останется на одной странице.</p>
+      </div>
+
+      <div id="formPanel" class="panel" style="display:none">
+        <h2 id="formTitle"></h2>
+        <p id="formDesc" class="muted"></p>
+        <div id="specialNotice"></div>
+        <div id="fields" class="form-grid"></div>
+        <div id="materialHint" class="hint"><strong>Есть учебник, текст или другой материал?</strong> Прикрепите его к нейросети вместе с готовым промптом.</div>
+        <div class="actions">
+          <button class="primary" onclick="generatePrompt()">Создать промпт</button>
+          <button class="ghost" onclick="restart()">Начать заново</button>
+        </div>
+
+        <div id="inlineResult" class="result-inline" style="display:none">
+          <h3>Ваш промпт готов</h3>
+          <p class="muted">Скопируйте его, затем откройте нужную нейросеть по ссылкам выше.</p>
+          <div id="promptOutput" class="result-box"></div>
+          <div class="result-actions">
+            <button id="copyBtn" class="primary" onclick="copyPrompt()">Скопировать промпт</button>
+            <button class="ghost" onclick="restart()">Начать заново</button>
+          </div>
+          <div class="usage"><strong>Как использовать:</strong> вставьте промпт в выбранную нейросеть. Если используете свои материалы, не забудьте прикрепить их вместе с промптом.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const tasks = {
+lesson:{
+ title:"План урока", icon:"◷", desc:"Собрать урок с логикой, этапами и таймингом",
+ fields:[
+  ["subject","Предмет","Например: биология",1,"text"],
+  ["grade","Класс / возраст","Например: 7 класс",1,"text"],
+  ["topic","Тема","Например: фотосинтез",1,"text"],
+  ["duration","Длительность","Например: 45 минут",1,"text"],
+  ["goal","Учебная цель","Если цели пока нет — оставьте поле пустым",0,"textarea"],
+  ["context","Дополнительный контекст","Что ученики уже знают, особенности класса, материалы...",0,"textarea"],
+  ["wishes","Пожелания","Например: больше самостоятельной работы, без групповой работы",0,"textarea"]
+ ]},
+tasks:{
+ title:"Задания для урока",icon:"✎",desc:"Создать упражнения и активности",
+ fields:[
+  ["subject","Предмет","Например: история",1,"text"],["grade","Класс / возраст","Например: 8 класс",1,"text"],
+  ["topic","Тема","Что отрабатываем?",1,"text"],["goal","Учебная цель","Необязательно",0,"textarea"],
+  ["context","Дополнительный контекст","Что уже изучали, по какому материалу работаете...",0,"textarea"],
+  ["wishes","Пожелания","Например: 5 заданий, без тестовых вопросов",0,"textarea"]
+ ]},
+diff:{
+ title:"Дифференциация",icon:"↔",desc:"Адаптировать задание под учеников",
+ fields:[
+  ["subject","Предмет","Например: русский язык",1,"text"],["grade","Класс / возраст","Например: 6 класс",1,"text"],
+  ["source","Что адаптируем?","Вставьте задание или напишите: «приложу материал к нейросети»",1,"textarea"],
+  ["target","Для кого адаптируем?","Например: ученику нужна дополнительная поддержка",1,"textarea"],
+  ["goal","Учебная цель","Необязательно",0,"textarea"],["difficulty","В чем возникает трудность?","Если знаете — опишите",0,"textarea"],
+  ["wishes","Пожелания","Что важно сохранить или учесть?",0,"textarea"]
+ ]},
+explain:{
+ title:"Объяснить сложную тему",icon:"◇",desc:"Найти понятное объяснение и примеры",
+ fields:[
+  ["subject","Предмет","Например: физика",1,"text"],["grade","Класс / возраст","Например: 7 класс",1,"text"],
+  ["topic","Что нужно объяснить?","Конкретное понятие, правило или явление",1,"textarea"],
+  ["difficulty","Что именно вызывает трудность?","Если знаете",0,"textarea"],
+  ["context","Дополнительный контекст","Что ученики уже знают?",0,"textarea"],
+  ["wishes","Пожелания","Например: через аналогию или жизненный пример",0,"textarea"]
+ ]},
+check:{
+ title:"Быстрая проверка понимания",icon:"✓",desc:"Быстро увидеть, поняли ли ученики главное",
+ fields:[
+  ["subject","Предмет","Например: математика",1,"text"],["grade","Класс / возраст","Например: 5 класс",1,"text"],
+  ["topic","Что нужно проверить?","Какое знание или умение?",1,"textarea"],
+  ["duration","Сколько времени есть?","Например: 5 минут",0,"text"],
+  ["context","Дополнительный контекст","Что именно изучали?",0,"textarea"],
+  ["wishes","Пожелания","Необязательно",0,"textarea"]
+ ]},
+reflection:{
+ title:"Рефлексия",icon:"◎",desc:"Помочь ученикам осмыслить свое обучение",
+ fields:[
+  ["grade","Класс / возраст","Например: 9 класс",1,"text"],
+  ["activity","Что изучали или делали?","Коротко опишите учебную работу",1,"textarea"],
+  ["goal","Цель рефлексии","Например: понять трудности и следующий шаг",0,"textarea"],
+  ["duration","Сколько времени есть?","Например: 5 минут",0,"text"],
+  ["wishes","Пожелания","Например: индивидуально, письменно",0,"textarea"]
+ ]},
+assessment:{
+ title:"Контрольная / самостоятельная",icon:"▤",desc:"Создать проверочную работу",
+ fields:[
+  ["subject","Предмет","Например: английский язык",1,"text"],["grade","Класс / возраст","Например: 7 класс",1,"text"],
+  ["topic","Что проверяем?","Темы, знания и умения",1,"textarea"],
+  ["type","Тип работы","",1,"select",["Контрольная работа","Самостоятельная работа"]],
+  ["duration","Длительность","Например: 40 минут",1,"text"],
+  ["criteria","Критерии","Если есть официальные критерии — укажите или приложите их к нейросети",0,"textarea"],
+  ["context","Дополнительный контекст","Например: какие задания ученики уже выполняли",0,"textarea"],
+  ["wishes","Пожелания","Например: два варианта",0,"textarea"]
+ ]},
+homework:{
+ title:"Домашнее задание",icon:"⌂",desc:"Подготовить осмысленную самостоятельную работу",
+ fields:[
+  ["subject","Предмет","Например: география",1,"text"],["grade","Класс / возраст","Например: 6 класс",1,"text"],
+  ["topic","Тема","Тема домашней работы",1,"text"],["goal","Учебная цель","Необязательно",0,"textarea"],
+  ["duration","Желаемое время выполнения","Например: до 20 минут",0,"text"],
+  ["context","Дополнительный контекст","Что проходили на уроке?",0,"textarea"],
+  ["wishes","Пожелания","Необязательно",0,"textarea"]
+ ]},
+ideas:{
+ title:"Идеи для урока",icon:"✦",desc:"Найти разные способы поработать с темой",
+ fields:[
+  ["subject","Предмет","Например: литература",1,"text"],["grade","Класс / возраст","Например: 10 класс",1,"text"],
+  ["topic","Тема","С чем хотите поработать?",1,"text"],["goal","Учебная цель","Необязательно",0,"textarea"],
+  ["limits","Ограничения","Например: без телефонов, только 20 минут",0,"textarea"],
+  ["wishes","Пожелания","Необязательно",0,"textarea"]
+ ]},
+feedback:{
+ title:"Оценить работу ученика",icon:"◉",desc:"Проанализировать работу и дать обратную связь",
+ notice:"<div class='notice'><strong>Важно:</strong> вместе с готовым промптом прикрепите к нейросети работу ученика. Если есть исходное задание и критерии оценивания, прикрепите их тоже.</div>",
+ fields:[
+  ["subject","Предмет","Например: русский язык",1,"text"],["grade","Класс / возраст","Например: 8 класс",1,"text"],
+  ["focus","Что особенно проверить?","Необязательно",0,"textarea"],
+  ["format","Какой формат обратной связи нужен?","Например: короткий комментарий ученику",0,"textarea"],
+  ["wishes","Пожелания","Необязательно",0,"textarea"]
+ ]}
+};
+
+let currentTask=null;
+const $=id=>document.getElementById(id);
+function showScreen(id){}
+function renderCards(){
+ $("taskCards").innerHTML=Object.entries(tasks).map(([key,t])=>`
+ <button id="card-${key}" class="task-card compact" onclick="selectTask('${key}')">
+  <div class="icon">${t.icon}</div><div><h3>${t.title}</h3><div class="task-desc">${t.desc}</div></div>
+ </button>`).join("");
+}
+function selectTask(key){
+ currentTask=key; const t=tasks[key]; $("formTitle").textContent=t.title; $("formDesc").textContent=t.desc;
+ $("specialNotice").innerHTML=t.notice||"";
+ $("materialHint").style.display= key==="feedback" ? "none":"block";
+ $("fields").innerHTML=t.fields.map(f=>{
+   const [id,label,ph,req,type,opts]=f;
+   let control= type==="textarea" ? `<textarea id="${id}" placeholder="${ph}"></textarea>` :
+     type==="select" ? `<select id="${id}"><option value="">Выберите</option>${opts.map(o=>`<option>${o}</option>`).join("")}</select>` :
+     `<input id="${id}" type="text" placeholder="${ph}">`;
+   return `<div class="field ${type==="textarea"?"full":""}">
+    <label for="${id}">${label}${req?" *":` <span class="optional">необязательно</span>`}</label>
+    ${control}<div class="error" id="${id}-error">Заполните это поле</div></div>`;
+ }).join("");
+ document.querySelectorAll(".task-card").forEach(c=>c.classList.remove("selected"));
+ const card=$("card-"+key); if(card) card.classList.add("selected");
+ $("emptyState").style.display="none";
+ $("formPanel").style.display="block";
+ $("inlineResult").style.display="none";
+}
+function val(id){ const e=$(id); return e?e.value.trim():""; }
+function block(label,id){ return val(id)?`${label}: ${val(id)}\n`:""; }
+function validate(){
+ let ok=true; tasks[currentTask].fields.forEach(f=>{
+   const [id,,,req]=f; if(!req)return; const e=$(id), err=$(id+"-error");
+   if(!e.value.trim()){e.classList.add("invalid");err.style.display="block";ok=false}
+   else{e.classList.remove("invalid");err.style.display="none"}
+ });
+ return ok;
+}
+function commonMaterial(){
+ return `Если к сообщению приложены учебные материалы, сначала изучи их и учитывай при выполнении задачи. Не придумывай содержание отсутствующих материалов.`;
+}
+function makePrompt(){
+ const p={
+ lesson:()=>`Ты — опытный методист и учитель предмета «${val("subject")}».
+
+Разработай урок для ${val("grade")} по теме «${val("topic")}». Продолжительность — ${val("duration")}.
+
+${block("Учебная цель", "goal")}${block("Дополнительный контекст", "context")}${block("Пожелания", "wishes")}
+${commonMaterial()} Если я прошу построить урок именно на основе приложенных материалов, не подменяй их содержание.
+
+Если учебная цель не указана, сформулируй ее самостоятельно. Она должна описывать конкретный результат обучения, который можно проверить к концу урока.
+
+Построй урок как логичную последовательность, ведущую к цели, а не как набор несвязанных активностей. Учитывай возраст учеников и реальное время. Не перегружай урок количеством этапов и заданий.
+
+Представь результат в практичном формате:
+1. цель урока;
+2. ожидаемый результат;
+3. что понадобится;
+4. ход урока с реалистичным таймингом, деятельностью учеников и действиями учителя;
+5. способы проверки понимания по ходу урока;
+6. короткое завершение, позволяющее проверить достижение цели.
+
+Если информации достаточно, сразу составь урок. Задавай уточняющие вопросы только тогда, когда без ответа нельзя принять важное педагогическое решение. Не придумывай отсутствующие данные об учениках или материалах.`,
+ tasks:()=>`Ты — опытный методист и учитель предмета «${val("subject")}».
+
+Создай задания для учеников ${val("grade")} по теме «${val("topic")}».
+
+${block("Учебная цель","goal")}${block("Дополнительный контекст","context")}${block("Пожелания","wishes")}
+${commonMaterial()} Если задания должны отрабатывать именно содержание приложенного материала, не требуй знаний, которых в нем нет.
+
+Если учебная цель не указана, определи ее по теме и контексту. Подбирай задания исходя из учебной цели, а не ради разнообразия форматов. Выстрой их в логичной последовательности и подбери количество и сложность с учетом возраста учеников.
+
+Каждое задание сформулируй так, чтобы его можно было сразу дать ученику: короткая понятная инструкция и необходимый материал. После заданий отдельно дай ответы, пример ожидаемого результата или ориентиры для проверки там, где это необходимо.
+
+Если информации достаточно, сразу создавай задания. Не придумывай отсутствующие характеристики класса или требования программы.`,
+ diff:()=>`Ты — опытный методист и специалист по дифференциации обучения.
+
+Помоги адаптировать задание по предмету «${val("subject")}» для учеников ${val("grade")}.
+
+Исходное задание / материал:
+${val("source")}
+
+Адаптация нужна для: ${val("target")}.
+
+${block("Учебная цель","goal")}${block("Наблюдаемая трудность","difficulty")}${block("Пожелания","wishes")}
+Если вместо текста задания приложен файл, сначала изучи его и работай с заданием из файла.
+
+Сначала определи основную учебную цель исходного задания. Если она указана мной, сохраняй именно ее. Основной принцип: сохраняй учебную цель, меняй путь к ней.
+
+Если ученику нужна поддержка, не упрощай учебную цель автоматически. Определи, где находится барьер, и при необходимости измени инструкцию, количество шагов, объем одновременно предъявляемой информации, опоры, пример, формат ответа или организацию задания.
+
+Если требуется усложнение, увеличивай глубину мышления, самостоятельность, перенос или применение знаний, а не просто количество однотипной работы.
+
+Сначала дай готовую адаптированную версию задания, которую можно передать ученику. Затем коротко объясни учителю, что было изменено и зачем.
+
+Не ставь диагнозов и не приписывай ученикам особенности, которых я не сообщал.`,
+ explain:()=>`Ты — опытный учитель предмета «${val("subject")}», который умеет объяснять сложные идеи понятным языком.
+
+Помоги мне объяснить ученикам ${val("grade")}: ${val("topic")}.
+
+${block("Что именно вызывает трудность","difficulty")}${block("Дополнительный контекст","context")}${block("Пожелания","wishes")}
+Мне не нужен план целого урока. Мне нужен понятный способ объяснить именно эту идею.
+
+Сохрани предметную точность, но адаптируй язык и степень абстракции под возраст учеников. По возможности двигайся от уже знакомого к новому и от конкретного к более абстрактному.
+
+Используй подходящие примеры, аналогии, сравнения, визуальные образы или пошаговое объяснение только там, где они действительно помогают. Если аналогия имеет ограничения, обозначь их.
+
+Дай:
+1. готовое объяснение, которое учитель может использовать почти дословно;
+2. 2–3 понятных примера;
+3. типичную ошибку или заблуждение, если оно характерно для темы;
+4. 2–3 коротких вопроса для проверки понимания.
+
+Если информации достаточно, сразу предложи объяснение.`,
+ check:()=>`Ты — опытный методист и учитель предмета «${val("subject")}».
+
+Создай короткую формативную проверку понимания для учеников ${val("grade")}.
+
+Нужно проверить: ${val("topic")}.
+
+${block("Доступное время","duration")}${block("Дополнительный контекст","context")}${block("Пожелания","wishes")}
+${commonMaterial()}
+
+Это не контрольная работа. Проверка должна быстро показать, поняли ли ученики ключевую идею и могут ли применить ее, а не только воспроизвести определение.
+
+Подбери минимальное количество вопросов или заданий, достаточное для проверки. Если время указано, строго учитывай его.
+
+Дай:
+1. готовую инструкцию ученикам;
+2. вопросы или задания;
+3. ответы / ожидаемые результаты для учителя.
+
+Используй понятные и однозначные формулировки. Если информации достаточно, сразу создавай проверку.`,
+ reflection:()=>`Ты — опытный методист.
+
+Создай рефлексию для учеников ${val("grade")} после следующей учебной работы:
+
+${val("activity")}
+
+${block("Цель рефлексии","goal")}${block("Доступное время","duration")}${block("Пожелания","wishes")}
+Рефлексия должна помогать ученику осмыслить собственное обучение: что он понял, что получилось, где возникла трудность, какую стратегию использовал и/или какой следующий шаг ему нужен.
+
+Не превращай рефлексию в проверочную работу и не ограничивай ее вопросами вроде «Понравился ли тебе урок?».
+
+Подбери небольшое количество вопросов или короткую механику, соответствующую возрасту и указанному времени. Дай готовую инструкцию для учеников и вопросы или задание для рефлексии. Если необходимо, добавь короткую инструкцию учителю по проведению.`,
+ assessment:()=>`Ты — опытный методист и учитель предмета «${val("subject")}».
+
+Создай ${val("type").toLowerCase()} для учеников ${val("grade")}.
+
+Проверяем: ${val("topic")}.
+Время выполнения: ${val("duration")}.
+
+${block("Критерии","criteria")}${block("Дополнительный контекст","context")}${block("Пожелания","wishes")}
+Если я приложил учебные материалы, спецификацию или критерии, сначала изучи их и учитывай при создании работы. Не подменяй предоставленные критерии собственными.
+
+Определи, какие знания и умения должна проверить работа. Создавай задания исходя из них. Рассчитай объем так, чтобы большинство учеников соответствующего возраста реально могли выполнить работу за указанное время.
+
+Избегай нескольких заданий, которые фактически проверяют одно и то же, если это не необходимо для надежности проверки.
+
+Сначала дай версию для ученика: название, понятную инструкцию и все задания.
+Затем дай версию для учителя: ответы или ожидаемые результаты, распределение баллов и понятные критерии проверки.
+
+Перед выдачей результата проверь, что задания соответствуют заявленному содержанию, инструкции однозначны, ответы существуют, а сумма баллов согласована.`,
+ homework:()=>`Ты — опытный методист и учитель предмета «${val("subject")}».
+
+Создай домашнее задание для учеников ${val("grade")} по теме «${val("topic")}».
+
+${block("Учебная цель","goal")}${block("Желаемое время выполнения","duration")}${block("Дополнительный контекст","context")}${block("Пожелания","wishes")}
+${commonMaterial()}
+
+Домашняя работа должна иметь понятную учебную функцию: закрепление, практика, применение, подготовка к следующему шагу или другая цель, оправданная контекстом. Если цель не указана, выбери наиболее подходящую самостоятельно.
+
+Задание должно быть выполнимо учеником самостоятельно. Учитывай возраст и указанное время. Не требуй специальных материалов, платных сервисов или помощи взрослых, если я этого не просил.
+
+Дай готовый текст домашнего задания для ученика. Затем отдельно добавь ответы, ожидаемый результат или критерии проверки там, где они нужны. Не увеличивай объем работы только ради количества заданий.`,
+ ideas:()=>`Ты — опытный методист и учитель предмета «${val("subject")}».
+
+Предложи несколько идей для работы с темой «${val("topic")}» с учениками ${val("grade")}.
+
+${block("Учебная цель","goal")}${block("Ограничения","limits")}${block("Пожелания","wishes")}
+${commonMaterial()}
+
+Мне пока не нужен готовый план урока. Мне нужны несколько действительно разных способов организовать работу учеников с этой темой.
+
+Не делай идеи интересными только за счет игры, соревнования или необычного оформления. В центре каждой идеи должна оставаться осмысленная работа с учебным содержанием.
+
+Предложи 5 разных вариантов. Для каждого коротко укажи:
+— суть идеи;
+— что делают ученики;
+— какую учебную задачу она решает;
+— примерное время;
+— что понадобится.
+
+Делай варианты достаточно конкретными, чтобы учитель мог понять, как идея будет выглядеть на практике, но не разворачивай их в полные планы уроков.`,
+ feedback:()=>`Ты — опытный учитель предмета «${val("subject")}».
+
+Помоги проанализировать работу ученика ${val("grade")}, которую я приложил к сообщению.
+
+${block("Что особенно проверить","focus")}${block("Формат обратной связи","format")}${block("Пожелания","wishes")}
+Сначала внимательно изучи работу ученика и все дополнительные материалы, которые я приложил.
+
+Если приложены исходное задание и критерии оценивания, соотнеси работу именно с ними. Не изменяй предоставленные критерии и не придумывай дополнительные требования.
+
+Отделяй то, что действительно видно в работе, от предположений. Не делай выводов о способностях, мотивации, старательности или личности ученика по одной работе.
+
+Если есть критерии:
+— оцени работу по каждому критерию;
+— подтверждай вывод конкретным фрагментом или особенностью работы;
+— покажи, что уже получается и что необходимо улучшить.
+
+Если критериев нет, не придумывай официальную оценку или балл. Проанализируй качество выполнения задания и дай содержательную обратную связь.
+
+В конце сформулируй обратную связь для ученика понятным и уважительным языком: конкретно отметь сильные стороны работы и выдели не более 1–3 наиболее важных следующих шагов.
+
+Если без отсутствующего задания, критерия или другой информации невозможно корректно выполнить именно запрошенное оценивание, сначала скажи, чего не хватает.`
+ };
+ return p[currentTask]().replace(/\n{3,}/g,"\n\n").trim();
+}
+function generatePrompt(){
+ if(!validate())return;
+ $("promptOutput").textContent=makePrompt();
+ $("copyBtn").textContent="Скопировать промпт";
+ $("inlineResult").style.display="block";
+ $("inlineResult").scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function copyPrompt(){
+ const text=$("promptOutput").textContent;
+ try{await navigator.clipboard.writeText(text)}
+ catch(e){
+  const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+ }
+ $("copyBtn").textContent="✓ Скопировано";
+ setTimeout(()=>$("copyBtn").textContent="Скопировать промпт",1800);
+}
+function restart(){
+ currentTask=null;
+ $("formPanel").style.display="none";
+ $("emptyState").style.display="block";
+ $("inlineResult").style.display="none";
+ document.querySelectorAll(".task-card").forEach(c=>c.classList.remove("selected"));
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+renderCards();
+</script>
+</body>
+</html>
